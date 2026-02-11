@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Conversation</title>
+  <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.5rem; color: #fff; }
+    .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 2rem; }
+    .agents {
+      display: flex;
+      gap: 3rem;
+      margin-bottom: 2rem;
+    }
+    .agent {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+      transition: box-shadow 0.2s;
+    }
+    .avatar.sarah { background: #2a4a7f; }
+    .avatar.mike { background: #4a2a6f; }
+    .avatar.speaking { box-shadow: 0 0 0 4px rgba(100, 200, 255, 0.6); }
+    .name { font-weight: 600; font-size: 0.95rem; }
+    #transcript {
+      width: 100%;
+      max-width: 600px;
+      height: 300px;
+      overflow-y: auto;
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .line { margin-bottom: 0.4rem; }
+    .line .speaker { font-weight: 600; }
+    .line .speaker.sarah-name { color: #6ba3ff; }
+    .line .speaker.mike-name { color: #b88aff; }
+    #status {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sales Conversation</h1>
+  <p class="subtitle">Sarah (sales rep) &amp; Mike (customer)</p>
+
+  <div class="agents">
+    <div class="agent">
+      <div class="avatar sarah" id="avatar-sarah">S</div>
+      <div class="name">Sarah</div>
+    </div>
+    <div class="agent">
+      <div class="avatar mike" id="avatar-mike">M</div>
+      <div class="name">Mike</div>
+    </div>
+  </div>
+
+  <div id="transcript"></div>
+  <div id="status">Connecting…</div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const roomUrl = params.get("roomUrl");
+    const token = params.get("token");
+
+    if (!roomUrl || !token) {
+      document.getElementById("status").textContent = "Missing roomUrl or token in URL params.";
+    } else {
+      const callFrame = DailyIframe.createCallObject({
+        audioSource: false,   // no mic
+        videoSource: false,   // no camera
+        subscribeToTracksAutomatically: true,
+      });
+
+      const transcript = document.getElementById("transcript");
+      const status = document.getElementById("status");
+      const participants = {};
+
+      function addLine(speaker, text) {
+        const div = document.createElement("div");
+        div.className = "line";
+        const cls = speaker === "Sarah" ? "sarah-name" : "mike-name";
+        div.innerHTML = `<span class="speaker ${cls}">${speaker}:</span> ${text}`;
+        transcript.appendChild(div);
+        transcript.scrollTop = transcript.scrollHeight;
+      }
+
+      callFrame.on("joined-meeting", () => {
+        status.textContent = "Listening…";
+      });
+
+      callFrame.on("participant-joined", (ev) => {
+        const p = ev.participant;
+        participants[p.session_id] = p.user_name || "?";
+      });
+
+      callFrame.on("participant-updated", (ev) => {
+        const p = ev.participant;
+        if (p.user_name) participants[p.session_id] = p.user_name;
+
+        // Speaking indicator
+        const name = participants[p.session_id];
+        if (name === "Sarah") {
+          document.getElementById("avatar-sarah").classList.toggle("speaking", !!p.tracks?.audio?.state === "playable" && p.audio);
+        } else if (name === "Mike") {
+          document.getElementById("avatar-mike").classList.toggle("speaking", !!p.tracks?.audio?.state === "playable" && p.audio);
+        }
+      });
+
+      callFrame.on("app-message", (ev) => {
+        // If agents send transcript messages
+        try {
+          const data = typeof ev.data === "string" ? JSON.parse(ev.data) : ev.data;
+          if (data.type === "transcript" && data.speaker && data.text) {
+            addLine(data.speaker, data.text);
+          }
+        } catch {}
+      });
+
+      // Use Daily's transcription events to show live transcript
+      callFrame.on("transcription-message", (ev) => {
+        if (!ev.is_final) return;
+        const name = participants[ev.participantId] || "?";
+        if (name === "Sarah" || name === "Mike") {
+          addLine(name, ev.text);
+        }
+      });
+
+      callFrame.join({ url: roomUrl, token: token })
+        .then(() => {
+          status.textContent = "Connected — listening to the conversation";
+        })
+        .catch((err) => {
+          status.textContent = "Error: " + err.message;
+        });
+    }
+  </script>
+</body>
+</html>
