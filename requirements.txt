@@ -1,4 +1,0 @@
-pipecat-ai[daily,openai,elevenlabs,silero]
-python-dotenv
-aiohttp
-loguru
