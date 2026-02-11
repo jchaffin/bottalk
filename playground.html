@@ -103,19 +103,32 @@
       function addLine(speaker, text) {
         const div = document.createElement("div");
         div.className = "line";
-        const cls = speaker === "Sarah" ? "sarah-name" : "mike-name";
+        const cls = speaker === "Sarah" ? "sarah-name"
+                  : speaker === "Mike"  ? "mike-name"
+                  : "";
         div.innerHTML = `<span class="speaker ${cls}">${speaker}:</span> ${text}`;
         transcript.appendChild(div);
         transcript.scrollTop = transcript.scrollHeight;
       }
 
+      // Populate participants map from the full roster (covers
+      // agents that joined before the playground).
+      function syncParticipants() {
+        const all = callFrame.participants();
+        for (const [key, p] of Object.entries(all)) {
+          if (key === "local") continue;
+          if (p.user_name) participants[p.session_id] = p.user_name;
+        }
+      }
+
       callFrame.on("joined-meeting", () => {
+        syncParticipants();
         status.textContent = "Listening…";
       });
 
       callFrame.on("participant-joined", (ev) => {
         const p = ev.participant;
-        participants[p.session_id] = p.user_name || "?";
+        if (p.user_name) participants[p.session_id] = p.user_name;
       });
 
       callFrame.on("participant-updated", (ev) => {
@@ -124,15 +137,15 @@
 
         // Speaking indicator
         const name = participants[p.session_id];
+        const audioPlaying = p.tracks?.audio?.state === "playable";
         if (name === "Sarah") {
-          document.getElementById("avatar-sarah").classList.toggle("speaking", !!p.tracks?.audio?.state === "playable" && p.audio);
+          document.getElementById("avatar-sarah").classList.toggle("speaking", audioPlaying);
         } else if (name === "Mike") {
-          document.getElementById("avatar-mike").classList.toggle("speaking", !!p.tracks?.audio?.state === "playable" && p.audio);
+          document.getElementById("avatar-mike").classList.toggle("speaking", audioPlaying);
         }
       });
 
       callFrame.on("app-message", (ev) => {
-        // If agents send transcript messages
         try {
           const data = typeof ev.data === "string" ? JSON.parse(ev.data) : ev.data;
           if (data.type === "transcript" && data.speaker && data.text) {
@@ -141,17 +154,20 @@
         } catch {}
       });
 
-      // Use Daily's transcription events to show live transcript
+      // Daily transcription events — show final transcriptions from agents.
       callFrame.on("transcription-message", (ev) => {
         if (!ev.is_final) return;
-        const name = participants[ev.participantId] || "?";
-        if (name === "Sarah" || name === "Mike") {
-          addLine(name, ev.text);
-        }
+        // Try both participantId and session_id for the lookup
+        const name = participants[ev.participantId]
+                  || participants[ev.session_id]
+                  || ev.user_name
+                  || "Unknown";
+        addLine(name, ev.text);
       });
 
       callFrame.join({ url: roomUrl, token: token })
         .then(() => {
+          syncParticipants();
           status.textContent = "Connected — listening to the conversation";
         })
         .catch((err) => {
