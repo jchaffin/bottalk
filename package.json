@@ -1,0 +1,15 @@
+{
+  "name": "outrival",
+  "private": true,
+  "description": "AI voice agent conversations — monorepo root",
+  "scripts": {
+    "dev": "npm run dev:frontend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:agents": "cd agents && python dev.py",
+    "build": "npm run build --prefix frontend",
+    "db:push": "npm run db:push --prefix frontend",
+    "db:seed": "npm run db:seed --prefix frontend",
+    "db:studio": "npm run db:studio --prefix frontend",
+    "lint": "npm run lint --prefix frontend"
+  }
+}

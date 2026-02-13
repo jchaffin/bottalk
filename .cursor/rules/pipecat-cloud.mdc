@@ -1,0 +1,43 @@
+---
+description: Pipecat Cloud deployment rules - always check real docs before guessing
+alwaysApply: true
+---
+
+# Pipecat Cloud
+
+When working with Pipecat or Pipecat Cloud code:
+
+1. **NEVER guess import paths, class names, or API signatures.** Always verify by:
+   - Reading the actual installed source: `~/.pyenv/versions/*/lib/python*/site-packages/pipecat/`
+   - Or fetching docs from https://docs.pipecat.ai/
+   - Use `Grep` on the installed package to find the real class/function name
+
+2. **Pipecat Cloud bot.py entry point:**
+   - Must export `async def bot(args):`
+   - Base image is `dailyco/pipecat-base:latest` (arm64 only)
+   - `RunnerArguments` is the base class with `body: Optional[Any]`
+   - `DailyRunnerArguments` adds `room_url` and `token` (only when `createDailyRoom: true`)
+   - When creating your own Daily room, use `RunnerArguments` and read from `args.body`
+
+3. **Pipecat Cloud REST API:**
+   - Base URL: `https://api.pipecat.daily.co/v1`
+   - Auth: `Authorization: Bearer <PRIVATE_API_KEY>` (long-lived, from Dashboard > API Keys > Private)
+   - Create agent: `POST /agents` with `serviceName`, `image`, etc.
+   - Update agent: `POST /agents/{agentName}` (same body minus serviceName)
+   - Start session: `POST /v1/public/{agentName}/start` with PUBLIC key
+
+4. **RTVI observer floods the signaling channel.** Always disable unused message types:
+   ```python
+   rtvi_observer_params=RTVIObserverParams(
+       bot_llm_enabled=False,
+       bot_tts_enabled=False,
+       bot_output_enabled=False,
+       bot_speaking_enabled=False,
+       user_llm_enabled=False,
+       user_speaking_enabled=False,
+       user_transcription_enabled=False,
+       metrics_enabled=False,
+   )
+   ```
+
+5. **Two agents in one room:** PCC creates one room per session. To put two agents in the same room, create the room yourself via Daily REST API and pass `room_url`/`token` in `args.body`.
