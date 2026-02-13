@@ -1,15 +1,18 @@
 {
   "name": "outrival",
   "private": true,
-  "description": "AI voice agent conversations — monorepo root",
+  "description": "Outrival Demo Project - two bots talk",
   "scripts": {
-    "dev": "npm run dev:frontend",
+    "dev": "concurrently -n frontend,agents -c blue,green \"npm run dev:frontend\" \"npm run dev:agents\"",
     "dev:frontend": "npm run dev --prefix frontend",
-    "dev:agents": "cd agents && python dev.py",
+    "dev:agents": "cd agents && .venv/bin/python dev.py",
     "build": "npm run build --prefix frontend",
     "db:push": "npm run db:push --prefix frontend",
     "db:seed": "npm run db:seed --prefix frontend",
     "db:studio": "npm run db:studio --prefix frontend",
     "lint": "npm run lint --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
