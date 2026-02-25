@@ -1,6 +1,6 @@
 [submodule "agents"]
 	path = agents
-	url = https://github.com/jchaffin/outrival-agents.git
+	url = https://github.com/jchaffin/bottalk-agents.git
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/jchaffin/outrival-frontend.git
