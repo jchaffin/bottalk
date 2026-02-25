@@ -3,7 +3,7 @@
   "private": true,
   "description": "Two Bots Talks",
   "scripts": {
-    "dev": "npm run kill-ports && npm run dev:frontend",
+    "dev": "npm run kill-ports && npm run dev:local",
     "dev:local": "concurrently --prefix-colors \"green,blue\" \"npm run dev:agents\" \"npm run dev:frontend\"",
     "kill-ports": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
     "dev:frontend": "npm run dev --prefix frontend",
