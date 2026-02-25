@@ -1,4 +1,4 @@
-# OutRival
+# Bottalk
 
 Live AI voice conversations. Two agents join a WebRTC room and role-play a scenario in real time — sales calls, support tickets, discovery sessions, or anything you describe.
 
@@ -16,8 +16,8 @@ agents/     Pipecat voice agents — deployed to Pipecat Cloud
 ## Setup
 
 ```bash
-git clone --recurse-submodules https://github.com/jchaffin/outrival.git
-cd outrival
+git clone --recurse-submodules https://github.com/jchaffin/bottalk.git
+cd bottalk
 ```
 
 ### Environment
