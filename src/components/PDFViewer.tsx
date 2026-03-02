@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
@@ -42,7 +41,7 @@ function PDFViewer({ pdfUrl, title: _title = 'PDF Document', className = '' }: P
     setError(null)
   }, [pdfUrl])
 
-  function onDocLoad ({ numPages: nextNumPages }: PDFDocumentProxy): void {
+  function onDocLoad({ numPages: nextNumPages }: { numPages: number }): void {
     setNumPages(nextNumPages);
     setLoading(false);
     setError(null);

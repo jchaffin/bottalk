@@ -22,6 +22,7 @@ interface ChunkMetadata {
   chunkIndex: number;
   totalChunks: number;
   source: 'knowledge';
+  [key: string]: string | number | undefined;
 }
 
 // Split text into chunks with overlap
