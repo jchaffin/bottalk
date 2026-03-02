@@ -60,11 +60,17 @@ class ElevenLabsSession extends EventEmitter<SessionEvents> implements VoiceSess
 
     this.ws = new WebSocket(wsUrl);
 
-    await new Promise<void>((resolve, reject) => {
-      const ws = this.ws!;
-      ws.onopen = () => resolve();
-      ws.onerror = () => reject(new Error('ElevenLabs WebSocket connection failed'));
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const ws = this.ws!;
+        ws.onopen = () => resolve();
+        ws.onerror = () => reject(new Error('ElevenLabs WebSocket connection failed'));
+      });
+    } catch (err) {
+      this.ws?.close();
+      this.ws = null;
+      throw err;
+    }
 
     this.ws.onmessage = (event) => {
       try {

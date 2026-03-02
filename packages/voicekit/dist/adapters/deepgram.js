@@ -73,12 +73,18 @@ var DeepgramSession = class extends EventEmitter {
     if (this.options.model) url.searchParams.set("model", this.options.model);
     if (this.options.language) url.searchParams.set("language", this.options.language);
     this.ws = new WebSocket(url.toString());
-    await new Promise((resolve, reject) => {
-      const ws = this.ws;
-      ws.onopen = () => resolve();
-      ws.onerror = (e) => reject(new Error("WebSocket connection failed"));
-      ws.onclose = () => this.emit("status_change", "DISCONNECTED");
-    });
+    try {
+      await new Promise((resolve, reject) => {
+        const ws = this.ws;
+        ws.onopen = () => resolve();
+        ws.onerror = () => reject(new Error("WebSocket connection failed"));
+        ws.onclose = () => this.emit("status_change", "DISCONNECTED");
+      });
+    } catch (err) {
+      this.ws?.close();
+      this.ws = null;
+      throw err;
+    }
     this.ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);

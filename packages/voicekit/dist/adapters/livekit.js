@@ -106,9 +106,15 @@ var LiveKitSession = class extends EventEmitter {
     this.room.on(RoomEvent.Reconnected, () => {
       this.emit("status_change", "CONNECTED");
     });
-    await this.room.connect(this.serverUrl, config.authToken);
-    await this.room.localParticipant.setMicrophoneEnabled(true);
-    this.emit("status_change", "CONNECTED");
+    try {
+      await this.room.connect(this.serverUrl, config.authToken);
+      await this.room.localParticipant.setMicrophoneEnabled(true);
+      this.emit("status_change", "CONNECTED");
+    } catch (err) {
+      await this.room.disconnect();
+      this.room = null;
+      throw err;
+    }
   }
   async disconnect() {
     if (this.room) {

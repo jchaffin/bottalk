@@ -159,6 +159,7 @@ function VoiceProvider({
       }, 500);
     } catch (error) {
       console.error("VoiceKit connection failed:", error);
+      sessionRef.current = null;
       onError?.(error instanceof Error ? error : new Error(String(error)));
       updateStatus("DISCONNECTED");
     }
@@ -604,6 +605,7 @@ function useAudioRecorder() {
     if (mediaRecorderRef.current?.state === "recording") {
       return;
     }
+    recordedChunksRef.current = [];
     try {
       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       mediaRecorder.ondataavailable = (event) => {
@@ -1005,6 +1007,7 @@ function useSessionHistory() {
     const itemId = item.item_id;
     if (interruptedItemsRef.current.has(itemId)) return;
     if (itemId) {
+      const displayedText = displayedTextRef.current.get(itemId) ?? accumulatedTextRef.current.get(itemId);
       const timer = deltaTimerRef.current.get(itemId);
       if (timer) clearTimeout(timer);
       deltaTimerRef.current.delete(itemId);
@@ -1013,14 +1016,13 @@ function useSessionHistory() {
       displayedTextRef.current.delete(itemId);
       accumulatedTextRef.current.delete(itemId);
       totalAudioDurationRef.current.delete(itemId);
-      const displayedText = displayedTextRef.current.get(itemId);
       const finalText = displayedText || item.transcript || "";
       const stripped = finalText.replace(/[\s.…]+/g, "");
       if (stripped.length > 0) {
         updateTranscriptMessage(itemId, finalText, false);
       }
       updateTranscriptItem(itemId, { status: "DONE" });
-      const transcriptItem = transcriptItems.find((i) => i.itemId === itemId);
+      const transcriptItem = transcriptItemsRef.current.find((i) => i.itemId === itemId);
       if (transcriptItem?.guardrailResult?.status === "IN_PROGRESS") {
         updateTranscriptItem(itemId, {
           guardrailResult: {
@@ -1045,7 +1047,8 @@ function useSessionHistory() {
       const category = moderation.moderationCategory ?? "NONE";
       const rationale = moderation.moderationRationale ?? "";
       const offendingText = moderation.testText;
-      updateTranscriptItem(lastAssistant.itemId, {
+      const assistantItemId = lastAssistant.itemId ?? lastAssistant.id;
+      updateTranscriptItem(assistantItemId, {
         guardrailResult: {
           status: "DONE",
           category,
@@ -1112,13 +1115,15 @@ function useRealtimeSession(callbacks = {}) {
   const [status, setStatus] = useState5("DISCONNECTED");
   const { logClientEvent, logServerEvent } = useEvent();
   const codecParamRef = useRef6("opus");
+  const callbacksRef = useRef6(callbacks);
+  callbacksRef.current = callbacks;
   const updateStatus = useCallback6(
     (s) => {
       setStatus(s);
-      callbacks.onConnectionChange?.(s);
+      callbacksRef.current.onConnectionChange?.(s);
       logClientEvent({}, s);
     },
-    [callbacks, logClientEvent]
+    [logClientEvent]
   );
   const historyHandlers = useSessionHistory().current;
   const interruptedRef = useRef6(/* @__PURE__ */ new Set());
@@ -1178,7 +1183,7 @@ function useRealtimeSession(callbacks = {}) {
       );
     });
     session.on("agent_handoff", (_from, to) => {
-      callbacks.onAgentHandoff?.(to);
+      callbacksRef.current.onAgentHandoff?.(to);
     });
     session.on("guardrail_tripped", (info) => {
       historyHandlers.handleGuardrailTripped(
@@ -1215,7 +1220,7 @@ function useRealtimeSession(callbacks = {}) {
       console.error("Session error:", msg);
       logServerEvent({ type: "error", message: msg });
     });
-  }, [callbacks, historyHandlers, logServerEvent]);
+  }, [historyHandlers, logServerEvent]);
   const connect = useCallback6(
     async ({
       getEphemeralKey,
@@ -1230,6 +1235,9 @@ function useRealtimeSession(callbacks = {}) {
         throw new Error(
           "useRealtimeSession: `adapter` is required in ConnectOptions. Pass an adapter like openai() from @jchaffin/voicekit/openai."
         );
+      }
+      if (!initialAgents?.length) {
+        throw new Error("useRealtimeSession: `initialAgents` must be a non-empty array.");
       }
       updateStatus("CONNECTING");
       const ek = await getEphemeralKey();
@@ -1453,8 +1461,8 @@ function SuggestionProvider({
   useEffect6(() => {
     const handler = (e) => {
       const detail = e.detail;
-      if (detail?.group) {
-        setSuggestionsState(detail.group);
+      if (detail) {
+        setSuggestionsState(detail.group ?? null);
       }
     };
     window.addEventListener(SUGGESTION_EVENT, handler);

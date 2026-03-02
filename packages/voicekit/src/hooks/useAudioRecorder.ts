@@ -28,6 +28,8 @@ export function useAudioRecorder() {
       return;
     }
 
+    recordedChunksRef.current = [];
+
     try {
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       

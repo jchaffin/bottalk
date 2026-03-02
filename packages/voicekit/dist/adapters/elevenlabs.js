@@ -73,11 +73,17 @@ var ElevenLabsSession = class extends EventEmitter {
   async connect(config) {
     const wsUrl = config.authToken?.startsWith("wss://") ? config.authToken : `${ELEVENLABS_WS_BASE}?agent_id=${this.agentId}`;
     this.ws = new WebSocket(wsUrl);
-    await new Promise((resolve, reject) => {
-      const ws = this.ws;
-      ws.onopen = () => resolve();
-      ws.onerror = () => reject(new Error("ElevenLabs WebSocket connection failed"));
-    });
+    try {
+      await new Promise((resolve, reject) => {
+        const ws = this.ws;
+        ws.onopen = () => resolve();
+        ws.onerror = () => reject(new Error("ElevenLabs WebSocket connection failed"));
+      });
+    } catch (err) {
+      this.ws?.close();
+      this.ws = null;
+      throw err;
+    }
     this.ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);

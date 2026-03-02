@@ -60,12 +60,18 @@ class DeepgramSession extends EventEmitter<SessionEvents> implements VoiceSessio
 
     this.ws = new WebSocket(url.toString());
 
-    await new Promise<void>((resolve, reject) => {
-      const ws = this.ws!;
-      ws.onopen = () => resolve();
-      ws.onerror = (e) => reject(new Error('WebSocket connection failed'));
-      ws.onclose = () => this.emit('status_change', 'DISCONNECTED');
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const ws = this.ws!;
+        ws.onopen = () => resolve();
+        ws.onerror = () => reject(new Error('WebSocket connection failed'));
+        ws.onclose = () => this.emit('status_change', 'DISCONNECTED');
+      });
+    } catch (err) {
+      this.ws?.close();
+      this.ws = null;
+      throw err;
+    }
 
     this.ws.onmessage = (event) => {
       try {

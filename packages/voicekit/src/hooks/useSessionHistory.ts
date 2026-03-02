@@ -172,6 +172,9 @@ export function useSessionHistory() {
     if (interruptedItemsRef.current.has(itemId)) return;
     
     if (itemId) {
+      // Capture displayed/accumulated text before clearing refs
+      const displayedText = displayedTextRef.current.get(itemId) ?? accumulatedTextRef.current.get(itemId);
+
       // Clear any pending timer and buffers
       const timer = deltaTimerRef.current.get(itemId);
       if (timer) clearTimeout(timer);
@@ -181,9 +184,7 @@ export function useSessionHistory() {
       displayedTextRef.current.delete(itemId);
       accumulatedTextRef.current.delete(itemId);
       totalAudioDurationRef.current.delete(itemId);
-      
-      // Use whatever was displayed, or fall back to server transcript
-      const displayedText = displayedTextRef.current.get(itemId);
+
       const finalText = displayedText || (item.transcript as string) || '';
       const stripped = finalText.replace(/[\s.…]+/g, '');
       if (stripped.length > 0) {
@@ -191,7 +192,7 @@ export function useSessionHistory() {
       }
       
       updateTranscriptItem(itemId, { status: 'DONE' });
-      const transcriptItem = transcriptItems.find((i) => i.itemId === itemId);
+      const transcriptItem = transcriptItemsRef.current.find((i) => i.itemId === itemId);
 
       if (transcriptItem?.guardrailResult?.status === 'IN_PROGRESS') {
         updateTranscriptItem(itemId, {
@@ -220,8 +221,9 @@ export function useSessionHistory() {
       const category = (moderation.moderationCategory as string) ?? 'NONE';
       const rationale = (moderation.moderationRationale as string) ?? '';
       const offendingText = moderation.testText as string | undefined;
+      const assistantItemId = (lastAssistant.itemId ?? (lastAssistant as Record<string, unknown>).id) as string;
 
-      updateTranscriptItem(lastAssistant.itemId as string, {
+      updateTranscriptItem(assistantItemId, {
         guardrailResult: {
           status: 'DONE',
           category,
@@ -258,7 +260,7 @@ export function useSessionHistory() {
       // Clear refs
       pendingDeltasRef.current.delete(itemId);
       pendingTextRef.current.delete(itemId);
-displayedTextRef.current.delete(itemId);
+      displayedTextRef.current.delete(itemId);
       accumulatedTextRef.current.delete(itemId);
       totalAudioDurationRef.current.delete(itemId);
 

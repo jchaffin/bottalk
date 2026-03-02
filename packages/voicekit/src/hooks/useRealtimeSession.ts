@@ -29,13 +29,16 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const { logClientEvent, logServerEvent } = useEvent();
   const codecParamRef = useRef<string>('opus');
 
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
+
   const updateStatus = useCallback(
     (s: VoiceStatus) => {
       setStatus(s);
-      callbacks.onConnectionChange?.(s);
+      callbacksRef.current.onConnectionChange?.(s);
       logClientEvent({}, s);
     },
-    [callbacks, logClientEvent]
+    [logClientEvent]
   );
 
   const historyHandlers = useSessionHistory().current;
@@ -103,7 +106,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     });
 
     session.on('agent_handoff', (_from, to) => {
-      callbacks.onAgentHandoff?.(to);
+      callbacksRef.current.onAgentHandoff?.(to);
     });
 
     session.on('guardrail_tripped', (info) => {
@@ -150,7 +153,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       console.error('Session error:', msg);
       logServerEvent({ type: 'error', message: msg });
     });
-  }, [callbacks, historyHandlers, logServerEvent]);
+  }, [historyHandlers, logServerEvent]);
 
   const connect = useCallback(
     async ({
@@ -168,6 +171,9 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
           'useRealtimeSession: `adapter` is required in ConnectOptions. ' +
           'Pass an adapter like openai() from @jchaffin/voicekit/openai.'
         );
+      }
+      if (!initialAgents?.length) {
+        throw new Error('useRealtimeSession: `initialAgents` must be a non-empty array.');
       }
 
       updateStatus('CONNECTING');

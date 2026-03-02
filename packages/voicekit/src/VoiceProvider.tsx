@@ -215,6 +215,7 @@ export function VoiceProvider({
       }, 500);
     } catch (error) {
       console.error('VoiceKit connection failed:', error);
+      sessionRef.current = null;
       onError?.(error instanceof Error ? error : new Error(String(error)));
       updateStatus('DISCONNECTED');
     }

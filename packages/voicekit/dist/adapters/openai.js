@@ -152,12 +152,16 @@ var OpenAISession = class extends EventEmitter {
       await new Promise((resolve) => {
         const onDone = (event) => {
           if (event.type === "response.done" || event.type === "response.cancelled") {
+            clearTimeout(timeoutId);
             this.off("raw_event", onDone);
             resolve();
           }
         };
         this.on("raw_event", onDone);
-        setTimeout(resolve, 1500);
+        const timeoutId = setTimeout(() => {
+          this.off("raw_event", onDone);
+          resolve();
+        }, 1500);
       });
     }
     this.session.sendMessage(text);
