@@ -1,52 +1,50 @@
-# Devfolio
+# Bottalk
 
-Repository for my website.
+Live AI voice conversations. Two agents join a WebRTC room and role-play a scenario in real time — sales calls, support tickets, discovery sessions, or anything you describe.
 
-### Features
-- **Voice AI Assistant** - Navigate and ask questions using voice
-- **Dynamic Skills** - AI-powered skill categorization
-- **Live Projects** - Real-time GitHub integration
-- **Interactive Resume** - PDF viewer and download
-- **Responsive Design** - Optimized for all devices
+Built with [Pipecat](https://pipecat.ai) + [Daily.co](https://daily.co) + [OpenAI](https://openai.com) + [ElevenLabs](https://elevenlabs.io).
 
-## Quick Start
+## Repo structure
 
-```bash
-# Install dependencies
-yarn install
+Thin parent repo with two Git submodules:
 
-# Add environment variables
-cp .env.example .env.local
-# Add your OPENAI_API_KEY
-
-# Run development server
-yarn dev
+```
+frontend/   Next.js app — UI, API routes, Prisma DB
+agents/     Pipecat voice agents — deployed to Pipecat Cloud
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+The root `package.json` only orchestrates local dev; the Next.js app lives under `frontend/`.
+
+## Setup
+
+```bash
+git clone --recurse-submodules https://github.com/jchaffin/bottalk.git
+cd bottalk
+npm install
+```
 
 ### Submodules
 
-`frontend` and `agents` are separate GitHub repos; the parent commit pins their SHAs. A leading `+` in `git submodule status` means your checkout does not match the last parent commit.
+Parent commits **pin** submodule SHAs. A leading `+` in `git submodule status` means your checkout does not match the parent’s recorded commit.
 
 ```bash
 ./scripts/sync-submodules.sh
 git add agents frontend && git commit -m "Bump submodules"
 ```
 
-Stale remote URLs after a rename: `git submodule sync --recursive`. Update to remote `master`: `git submodule update --remote --merge`.
+After a remote URL change: `git submodule sync --recursive`. Track `master` in each submodule: `git submodule update --remote --merge`.
 
 ### Environment
+
+Create `.env.local` at the **repo root** for keys shared by tooling, and use each submodule’s `.env.local` for app-specific secrets (see their READMEs).
 
 ```env
 DAILY_API_KEY=
 OPENAI_API_KEY=
 ELEVENLABS_API_KEY=
 PIPECAT_CLOUD_API_KEY=
-PCC_PRIVATE_KEY=     # Pipecat Cloud Dashboard > API Keys > Private (for deploy + secrets)
+PCC_PRIVATE_KEY=
 ```
-
-The frontend and agents each have their own `.env.local` — see their READMEs for details.
 
 ### Frontend
 
@@ -68,26 +66,24 @@ pip install -r requirements.txt
 ## Development
 
 ```bash
-npm run dev:frontend  # Next.js on :3000
-npm run dev:agents    # Python agent server on :8000 (for local dev)
+npm run dev              # kill :3000 if busy, then frontend + agents
+npm run dev:frontend     # Next.js on :3000 only
+npm run dev:agents       # Python agent server on :8000
 ```
 
-## Tech Stack
+## Root scripts
 
-- Next.js 15 with TypeScript
-- Tailwind CSS v4
-- OpenAI Agents Framework
-- PDF.js for document viewing
+| Command | What it does |
+|---------|----------------|
+| `npm run dev` | Free port 3000, then run frontend and agents together |
+| `npm run dev:local` | Same as concurrent dev, without killing :3000 |
+| `npm run dev:frontend` | `npm run dev` in `frontend/` |
+| `npm run dev:agents` | `dev.py` in `agents/` |
+| `npm run build` | Production build (`frontend/`) |
+| `npm run db:push` / `db:seed` / `db:studio` | Prisma via `frontend/` |
+| `npm run lint` | ESLint in `frontend/` |
 
-## Scripts
-
-- `yarn dev` - Development server
-- `yarn build` - Production build
-- `yarn lint` - Code linting
-
----
-
-## How It Works
+## How it works
 
 1. User picks a scenario or types a custom topic
 2. Frontend creates a Daily room and starts two Pipecat agents
@@ -102,21 +98,19 @@ npm run dev:agents    # Python agent server on :8000 (for local dev)
 | Database | Prisma 7, PostgreSQL (Prisma Postgres) |
 | Agents | Pipecat, GPT-4o, ElevenLabs, Silero VAD |
 | Transport | Daily.co WebRTC, Deepgram transcription |
-| Deploy | Vercel (frontend), Pipecat Cloud (agents) |
+| Deploy | Vercel (`frontend/`), Pipecat Cloud (`agents/`) |
 
 ## Vercel (production)
 
-Set these in **Vercel → Project → Settings → Environment Variables** (Production):
+Configure these on the **frontend** Vercel project:
 
 | Variable | Purpose |
 |----------|---------|
-| `PIPECAT_CLOUD_PUBLIC_API_KEY` | Pipecat Cloud **Public** API key — required so `/api/start` talks to PCC instead of localhost |
-| `DAILY_API_KEY` | Daily REST API (create rooms, tokens) |
-| `PRISMA_DATABASE_URL` | Postgres (Prisma Accelerate URL) |
-| `POSTGRES_URL` | Direct DB URL for migrations if you run them in CI |
+| `PIPECAT_CLOUD_PUBLIC_API_KEY` | Pipecat Cloud **public** API key — so `/api/start` uses PCC, not localhost |
+| `DAILY_API_KEY` | Daily REST API (rooms, tokens) |
+| `PRISMA_DATABASE_URL` | Postgres (e.g. Prisma Accelerate) |
+| `POSTGRES_URL` | Direct DB URL if you run migrations in CI |
 
-Optional: `PCC_PRIVATE_KEY` (stop sessions), `OPENAI_API_KEY` (embeddings / KPIs), Pinecone keys.
+Optional: `PCC_PRIVATE_KEY`, `OPENAI_API_KEY`, etc. — see `frontend` README.
 
-**Do not** set `NEXT_PUBLIC_API_URL` on Vercel unless you intentionally proxy agents to another URL. Leaving it unset uses Pipecat Cloud when `PIPECAT_CLOUD_PUBLIC_API_KEY` is present.
-
-If calls still fail, check that the PCC agent name matches: `NEXT_PUBLIC_PCC_AGENT_NAME` / `PCC_AGENT_NAME` (default `bottalk-agent`).
+Do not set `NEXT_PUBLIC_API_URL` on Vercel unless you intentionally point the browser at a custom agent URL.
