@@ -1,6 +1,8 @@
 [submodule "agents"]
 	path = agents
 	url = https://github.com/jchaffin/bottalk-agents.git
+	branch = master
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/jchaffin/bottalk-frontend.git
+	branch = master
